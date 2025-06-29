@@ -11,9 +11,9 @@ app = Flask(__name__)
 
 # Configuración de la base de datos
 # Para SQLite, es un archivo en tu proyecto.
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///pedidos.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://basedatosenvioskhs_user:3xXzK1ywTffo2GtECx7sP65haMao41vX@dpg-d1gqinfgi27c73c1cacg-a/basedatosenvioskhs')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'una_clave_secreta_muy_larga_y_aleatoria_para_flask') # ¡CAMBIA ESTO EN PRODUCCIÓN!
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', '3xXzK1ywTffo2GtECx7sP65haMao41vX') # ¡CAMBIA ESTO EN PRODUCCIÓN!
 
 db.init_app(app)
 
