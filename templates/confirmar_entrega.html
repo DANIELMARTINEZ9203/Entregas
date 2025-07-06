@@ -11,13 +11,28 @@
         label { display: block; margin-bottom: 8px; font-weight: bold; }
         input[type="text"] { width: calc(100% - 22px); padding: 10px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 4px; }
         canvas { border: 1px solid #ccc; background-color: #fff; display: block; margin: 0 auto 20px; touch-action: none; }
-        button { background-color: #4CAF50; color: white; padding: 12px 20px; border: none; border-radius: 4px; cursor: pointer; width: 100%; font-size: 16px; }
+        button { background-color: #4CAF50; color: white; padding: 12px 20px; border: none; border-radius: 4px; cursor: pointer; width: 100%; font-size: 16px; margin-bottom: 10px; }
         button:hover { background-color: #45a049; }
         .messages { margin-bottom: 20px; padding: 10px; border-radius: 4px; }
         .messages.error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
         .messages.success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .messages.info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
         .small-text { font-size: 0.8em; color: #777; text-align: center; margin-top: 20px;}
+        /* Estilos para la sección de ubicación */
+        #location-map {
+            width: 100%;
+            height: 300px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        #location-status {
+            text-align: center;
+            margin-bottom: 15px;
+            font-style: italic;
+            color: #555;
+        }
     </style>
 </head>
 <body>
@@ -33,9 +48,11 @@
             {% endif %}
         {% endwith %}
 
-        <p>Pedido: <strong>{{ pedido_id }}</strong></p>
+        <p>Delivery ID: <strong>{{ pedido_id }}</strong></p>
         <p>Estado actual: <strong>{{ pedido.estado }}</strong></p>
-
+        <p>Cliente: <strong>{{ pedido.cliente }}</strong></p>
+        <p>Descripción: <strong>{{ pedido.descripcion }}</strong></p>
+        <p>Fecha de Impresión: <strong>{{ pedido.fecha_impresion }}</strong></p>
         <form method="POST">
             <label for="nombre_cliente">Nombre de quien recibe:</label>
             <input type="text" id="nombre_cliente" name="nombre_cliente" required>
@@ -43,7 +60,17 @@
             <label>Firma de recibido:</label>
             <canvas id="signatureCanvas" width="400" height="200"></canvas>
             <button type="button" onclick="clearSignature()">Borrar Firma</button>
-            <br><br>
+            <br>
+            
+            <label for="location_status">Ubicación de entrega:</label>
+            <div id="location-status">Obteniendo ubicación...</div>
+            <iframe id="location-map" frameborder="0" style="border:0" allowfullscreen
+                src="https://www.google.com/maps/embed/v1/view?key=TU_API_KEY_DE_Maps&center={{ latitude }},{{ longitude }}&zoom=16">
+            </iframe>
+            
+            <input type="hidden" id="latitude" name="latitude">
+            <input type="hidden" id="longitude" name="longitude">
+            <br>
             <button type="submit">Confirmar Entrega</button>
             <input type="hidden" id="firma_data" name="firma_data">
         </form>
@@ -54,21 +81,27 @@
         const canvas = document.getElementById('signatureCanvas');
         const ctx = canvas.getContext('2d');
         const firmaDataInput = document.getElementById('firma_data');
+        
+        const latitudeInput = document.getElementById('latitude');
+        const longitudeInput = document.getElementById('longitude');
+        const locationMap = document.getElementById('location-map');
+        const locationStatus = document.getElementById('location-status');
 
         let drawing = false;
 
+        // --- Funcionalidad de la firma ---
         canvas.addEventListener('mousedown', startDrawing);
         canvas.addEventListener('mouseup', stopDrawing);
         canvas.addEventListener('mousemove', draw);
 
         // Para dispositivos táctiles
         canvas.addEventListener('touchstart', (e) => {
-            e.preventDefault(); // Previene el scroll con el dedo
+            e.preventDefault();
             startDrawing(e.touches[0]);
         });
         canvas.addEventListener('touchend', stopDrawing);
         canvas.addEventListener('touchmove', (e) => {
-            e.preventDefault(); // Previene el scroll con el dedo
+            e.preventDefault();
             draw(e.touches[0]);
         });
 
@@ -81,7 +114,7 @@
 
         function stopDrawing() {
             drawing = false;
-            const dataURL = canvas.toDataURL('image/png'); // Convertir firma a Base64
+            const dataURL = canvas.toDataURL('image/png');
             firmaDataInput.value = dataURL;
         }
 
@@ -95,6 +128,66 @@
         function clearSignature() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             firmaDataInput.value = '';
+        }
+
+        // --- Funcionalidad de la ubicación ---
+        window.onload = function() {
+            getLocation();
+        };
+
+        function getLocation() {
+            if (navigator.geolocation) {
+                locationStatus.textContent = 'Solicitando permiso de ubicación...';
+                navigator.geolocation.getCurrentPosition(showPosition, showError, {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                });
+            } else {
+                locationStatus.textContent = 'La geolocalización no es compatible con este navegador.';
+                locationStatus.style.color = 'red';
+            }
+        }
+
+        function showPosition(position) {
+            const latitude = position.coords.latitude;
+            const longitude = position.coords.longitude;
+
+            latitudeInput.value = latitude;
+            longitudeInput.value = longitude;
+
+            locationStatus.textContent = `Ubicación obtenida: Latitud ${latitude}, Longitud ${longitude}`;
+            locationStatus.style.color = 'green';
+            locationMap.style.display = 'block';
+
+            // ***************************************************************
+            // CORRECCIÓN IMPORTANTE: URL de Google Maps Embed API
+            // Reemplaza 'TU_API_KEY_DE_Maps' con tu clave real.
+            // Si no tienes una, esta parte del mapa no funcionará.
+            // ***************************************************************
+            const mapUrl = `https://www.google.com/maps/embed/v1/view?key=TU_API_KEY_DE_Maps&center=${latitude},${longitude}&zoom=16`;
+            locationMap.src = mapUrl;
+        }
+
+        function showError(error) {
+            let message = '';
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    message = "Permiso de ubicación denegado por el usuario.";
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    message = "Información de ubicación no disponible.";
+                    break;
+                case error.TIMEOUT:
+                    message = "La solicitud para obtener la ubicación ha caducado.";
+                    break;
+                case error.UNKNOWN_ERROR:
+                    message = "Error desconocido al obtener la ubicación.";
+                    break;
+            }
+            locationStatus.textContent = `Error al obtener la ubicación: ${message}`;
+            locationStatus.style.color = 'red';
+            locationMap.style.display = 'none';
         }
     </script>
 </body>
