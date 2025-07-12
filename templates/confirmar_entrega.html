@@ -64,8 +64,7 @@
             
             <label for="location_status">Ubicación de entrega:</label>
             <div id="location-status">Obteniendo ubicación...</div>
-            <iframe id="location-map" frameborder="0" style="border:0" allowfullscreen
-                src="https://www.google.com/maps/embed/v1/view?key=TU_API_KEY_DE_Maps&center={{ latitude }},{{ longitude }}&zoom=16">
+            <iframe id="location-map" frameborder="0" style="border:0" allowfullscreen>
             </iframe>
             
             <input type="hidden" id="latitude" name="latitude">
@@ -161,11 +160,12 @@
             locationMap.style.display = 'block';
 
             // ***************************************************************
-            // CORRECCIÓN IMPORTANTE: URL de Google Maps Embed API
+            // CORRECCIÓN: URL de Google Maps Embed API
             // Reemplaza 'TU_API_KEY_DE_Maps' con tu clave real.
-            // Si no tienes una, esta parte del mapa no funcionará.
+            // Asegúrate de que tu clave de API tenga habilitada la "Maps Embed API".
             // ***************************************************************
-            const mapUrl = `https://www.google.com/maps/embed/v1/view?key=TU_API_KEY_DE_Maps&center=${latitude},${longitude}&zoom=16`;
+            const apiKey = 'TU_API_KEY_DE_Maps'; // ¡REEMPLAZA ESTO CON TU CLAVE REAL!
+            const mapUrl = `https://www.google.com/maps/embed/v1/view?key=${apiKey}&center=${latitude},${longitude}&zoom=16`;
             locationMap.src = mapUrl;
         }
 
