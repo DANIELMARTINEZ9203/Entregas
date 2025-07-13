@@ -96,8 +96,14 @@ def confirmar_entrega():
         # Validar que los campos requeridos no estén vacíos
         if not nombre_cliente or not firma_base64:
             flash('Por favor, ingrese su nombre y firme para confirmar la entrega.', 'error')
-            return render_template('confirmar_entrega.html', pedido_id=pedido_id_unico, pedido=pedido)
-
+            #return render_template('confirmar_entrega.html', pedido_id=pedido_id_unico, pedido=pedido)
+            return render_template('confirmar_entrega.html',
+                                   pedido_id=pedido_id_unico,
+                                   pedido=pedido,
+                                   cliente=pedido.cliente, # Añadido
+                                   descripcion=pedido.descripcion, # Añadido
+                                   fecha_impresion=pedido.fecha_impresion.strftime("%Y-%m-%d %H:%M:%S") if pedido.fecha_impresion else 'N/A' # Añadido
+                                   )
         # Actualizar los datos del pedido
         pedido.nombre_cliente = nombre_cliente
         pedido.firma_base64 = firma_base64
