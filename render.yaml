@@ -1,20 +1,20 @@
- services:
-  - type: web
-    name: flask-pedidos
-    env: python
-    # *** CAMBIO IMPORTANTE: Especificar la versión de Python directamente ***
-    # Esto asegura que Render use Python 3.11.9, resolviendo el problema de psycopg2.
-    # Esta configuración en render.yaml anulará runtime.txt.
-    pythonVersion: 3.11.9
-    
-    # *** CAMBIO IMPORTANTE: Incluir create_db.py en el buildCommand ***
-    # Esto asegura que las tablas de la base de datos se creen durante el despliegue.
-    buildCommand: "pip install -r requirements.txt && python create_db.py"
-    
-    startCommand: "gunicorn app:app"
-    envVars:
-      - key: FLASK_ENV
-        value: production
+services:
+ - type: web
+   name: flask-pedidos
+   env: python
+   # *** CAMBIO IMPORTANTE: Especificar la versión de Python directamente ***
+   # Esto asegura que Render use Python 3.11.9, resolviendo el problema de psycopg2.
+   # Esta configuración en render.yaml anulará runtime.txt.
+   pythonVersion: 3.11.9
+   
+   # *** CAMBIO IMPORTANTE: Incluir create_db.py en el buildCommand ***
+   # Esto asegura que las tablas de la base de datos se creen durante el despliegue.
+   buildCommand: "pip install -r requirements.txt && python create_db.py"
+   
+   startCommand: "gunicorn app:app"
+   envVars:
+     - key: FLASK_ENV
+       value: production
       # Asegúrate de que la variable DATABASE_URL esté configurada aquí en Render UI,
       # o descomenta y ponla aquí (aunque se recomienda en la UI de Render por seguridad)
       # - key: DATABASE_URL
