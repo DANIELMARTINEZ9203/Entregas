@@ -33,7 +33,19 @@ with app.app_context():
         # Opcional: Añadir algunos pedidos de prueba si la BD está vacía
         if Pedido.query.count() == 0:
             db.session.add(Pedido(pedido_id_unico="PEDIDO-KHS-001", estado="En ruta", cliente="KHS Mexico S.A. de C.V.", descripcion="Bomba de Agua", fecha_impresion=datetime(2024, 7, 10, 10, 0, 0)))
-            db.session.add(Pedido(pedido_id_unico="PEDIDO-KHS-002", estado="Entregado", cliente="Cliente Ejemplo S.A.", descripcion="Componentes Electrónicos", fecha_impresion=datetime(2024, 7, 11, 14, 30, 0)))
+            # Para PEDIDO-KHS-002, lo inicializamos como "Entregado" con algunos datos para la prueba
+            db.session.add(Pedido(
+                pedido_id_unico="PEDIDO-KHS-002",
+                estado="Entregado",
+                cliente="Cliente Ejemplo S.A.",
+                descripcion="Componentes Electrónicos",
+                fecha_impresion=datetime(2024, 7, 11, 14, 30, 0),
+                nombre_cliente="Juan Perez", # Datos de prueba para un pedido entregado
+                fecha_entrega=datetime(2024, 7, 11, 15, 0, 0),
+                firma_base64="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=", # Pequeña imagen base64 de 1x1 pixel
+                latitude="19.2833", # Latitud de ejemplo
+                longitude="-99.1333" # Longitud de ejemplo
+            ))
             db.session.add(Pedido(pedido_id_unico="PEDIDO-KHS-003", estado="En ruta", cliente="Proveedor Industrial", descripcion="Refacciones Varias", fecha_impresion=datetime(2024, 7, 12, 9, 15, 0)))
             db.session.commit()
             print("Pedidos de prueba añadidos a la base de datos.")
@@ -71,22 +83,32 @@ def confirmar_entrega():
     # Si el pedido ya está entregado, mostrar mensaje y detalles
     if pedido.estado == "Entregado":
         # Limpiar cualquier mensaje flash existente antes de mostrar uno nuevo
-        # Esto previene que se muestren mensajes de interacciones anteriores.
         session.pop('_flashes', None)
         
         # Flashear un mensaje específico para este pedido ya entregado
         formatted_fecha_entrega = pedido.fecha_entrega.strftime("%Y-%m-%d %H:%M:%S") if pedido.fecha_entrega else 'N/A'
         flash(f'El pedido **{pedido_id_unico}** ya ha sido marcado como entregado el **{formatted_fecha_entrega}**.', 'info')
         
-        # Redirigir a la página de éxito para mostrar los detalles de este pedido específico
-        return render_template('exito.html',
-                                 pedido_id=pedido_id_unico,
-                                 mensaje="Este pedido ya ha sido entregado.",
-                                 nombre_cliente=pedido.nombre_cliente,
-                                 fecha_entrega=formatted_fecha_entrega,
-                                 firma_base64=pedido.firma_base64,
-                                 latitude=pedido.latitude,
-                                 longitude=pedido.longitude)
+        # Preparar los datos para exito.html, asegurando que no sean None
+        nombre_cliente_display = pedido.nombre_cliente if pedido.nombre_cliente else 'N/A'
+        firma_base64_display = pedido.firma_base64 if pedido.firma_base64 else ''
+        latitude_display = pedido.latitude if pedido.latitude else ''
+        longitude_display = pedido.longitude if pedido.longitude else ''
+
+        try:
+            return render_template('exito.html',
+                                     pedido_id=pedido_id_unico,
+                                     mensaje="Este pedido ya ha sido entregado.",
+                                     nombre_cliente=nombre_cliente_display,
+                                     fecha_entrega=formatted_fecha_entrega,
+                                     firma_base64=firma_base64_display,
+                                     latitude=latitude_display,
+                                     longitude=longitude_display)
+        except Exception as e:
+            print(f"ERROR: Error al renderizar exito.html para pedido {pedido_id_unico}: {e}")
+            flash(f'Error interno al mostrar los detalles del pedido: {e}', 'error')
+            return redirect(url_for('error_page'))
+
 
     # Procesar el formulario cuando se envía (método POST)
     if request.method == 'POST':
