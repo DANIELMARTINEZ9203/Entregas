@@ -100,9 +100,9 @@ def confirmar_entrega():
             return render_template('confirmar_entrega.html',
                                    pedido_id=pedido_id_unico,
                                    pedido=pedido,
-                                   cliente=pedido.cliente, # Añadido
-                                   descripcion=pedido.descripcion, # Añadido
-                                   fecha_impresion=pedido.fecha_impresion.strftime("%Y-%m-%d %H:%M:%S") if pedido.fecha_impresion else 'N/A' # Añadido
+                                   #cliente=pedido.cliente, # Añadido
+                                   #descripcion=pedido.descripcion, # Añadido
+                                   #fecha_impresion=pedido.fecha_impresion.strftime("%Y-%m-%d %H:%M:%S") if pedido.fecha_impresion else 'N/A' # Añadido
                                    )
         # Actualizar los datos del pedido
         pedido.nombre_cliente = nombre_cliente
