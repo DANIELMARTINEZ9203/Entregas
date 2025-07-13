@@ -5,35 +5,147 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Entrega Confirmada</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; }
-        .container { max-width: 600px; margin: auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); text-align: center; }
-        h1 { color: #4CAF50; }
-        .firma-img { max-width: 100%; height: auto; border: 1px solid #eee; margin-top: 15px; }
-        .messages { margin-top: 20px; padding: 10px; border-radius: 4px; background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background-color: #f4f4f4; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            box-sizing: border-box; /* Ensures padding and border are included in the element's total width and height */
+        }
+        .container { 
+            max-width: 600px; 
+            width: 100%; 
+            background: white; 
+            padding: 30px; 
+            border-radius: 8px; 
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); 
+            text-align: center; 
+            box-sizing: border-box;
+        }
+        h1 { 
+            color: #4CAF50; 
+            margin-bottom: 20px; 
+            font-size: 2em; /* Adjusted for better visual hierarchy */
+        }
+        p { 
+            margin-bottom: 10px; 
+            line-height: 1.5; 
+            color: #555; /* Slightly softer text color */
+        }
+        strong { 
+            color: #333; 
+            font-weight: bold;
+        }
+        .messages { 
+            margin-bottom: 20px; 
+            padding: 10px; 
+            border-radius: 4px; 
+            text-align: left; 
+            list-style: none; /* Remove default list styling */
+            padding-left: 0; /* Remove default padding for ul */
+        }
+        .messages li {
+            margin-bottom: 5px;
+            padding: 8px 12px;
+            border-radius: 4px;
+        }
+        .messages.error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .messages.success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .messages.info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        
+        .firma-img { 
+            max-width: 100%; 
+            height: auto; 
+            border: 1px solid #ddd; /* Changed from #eee for better visibility */
+            border-radius: 4px; 
+            margin-top: 15px; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); /* Subtle shadow for the image */
+        }
+        .map-container { 
+            width: 100%; 
+            height: 300px; 
+            border: 1px solid #ddd; 
+            border-radius: 4px; 
+            margin-top: 15px; 
+            overflow: hidden; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); /* Subtle shadow for the map */
+        }
+        iframe { 
+            width: 100%; 
+            height: 100%; 
+            border: 0; 
+        }
+        .button-back {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+            text-decoration: none; /* For anchor tag */
+            display: inline-block;
+            transition: background-color 0.3s ease; /* Smooth hover effect */
+        }
+        .button-back:hover {
+            background-color: #0056b3;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>✅ ¡Entrega Confirmada!</h1>
+        
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                <div class="messages">
+                <ul class="messages"> {# Changed to ul for standard message list #}
                     {% for category, message in messages %}
-                        <p>{{ message }}</p>
+                        <li class="{{ category }}">{{ message }}</li>
                     {% endfor %}
-                </div>
+                </ul>
             {% endif %}
         {% endwith %}
-        <p>El pedido <strong>{{ pedido_id }}</strong> ha sido confirmado como entregado.</p>
-        <p>Recibido por: <strong>{{ nombre_cliente }}</strong></p>
-        <p>Fecha y Hora: <strong>{{ fecha_entrega }}</strong></p>
+
+        <p>El pedido <strong>{{ pedido_id if pedido_id else 'N/A' }}</strong> ha sido confirmado como entregado.</p>
+        
+        {# Display the general message if provided, otherwise a default #}
+        {% if mensaje %}
+            <p>Mensaje: <strong>{{ mensaje }}</strong></p>
+        {% endif %}
+
+        <p>Recibido por: <strong>{{ nombre_cliente if nombre_cliente else 'N/A' }}</strong></p>
+        <p>Fecha y Hora: <strong>{{ fecha_entrega if fecha_entrega else 'N/A' }}</strong></p>
+
         {% if firma_base64 %}
             <p>Firma:</p>
             <img src="{{ firma_base64 }}" alt="Firma de recibido" class="firma-img">
         {% else %}
             <p>Firma no disponible.</p>
         {% endif %}
+
+        {% if latitude and longitude %}
+            <p>Ubicación de entrega:</p>
+            <div class="map-container">
+                <!-- 
+                    IMPORTANT: Replace 'AIzaSyBvVzpy1jL1k4hWhZWktC2V4CVj_qkIMTw' with your actual Google Maps API key.
+                    Ensure that "Maps Embed API" is enabled in your Google Cloud Console.
+                -->
+                <iframe 
+                    src="https://www.google.com/maps/embed/v1/view?key=AIzaSyBvVzpy1jL1k4hWhZWktC2V4CVj_qkIMTw&center={{ latitude }},{{ longitude }}&zoom=16" 
+                    allowfullscreen>
+                </iframe>
+            </div>
+        {% else %}
+            <p>No se proporcionaron coordenadas de ubicación.</p>
+        {% endif %}
+
         <p>¡Gracias por su confirmación!</p>
+
+        <a href="{{ url_for('index') }}" class="button-back">Volver al Inicio</a>
     </div>
 </body>
 </html>
