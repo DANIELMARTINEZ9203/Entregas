@@ -5,6 +5,7 @@ from models import db, Pedido
 import os
 from dotenv import load_dotenv
 from datetime import datetime
+import traceback # Importar traceback para depuración
 
 # Cargar variables de entorno desde .env
 load_dotenv()
@@ -20,12 +21,17 @@ print(f"DEBUG: SQLALCHEMY_DATABASE_URI: {app.config['SQLALCHEMY_DATABASE_URI']}"
 
 db.init_app(app)
 
-with app.app_context():
-    try:
-        db.create_all()
-        print("Base de datos creada/actualizada si no existía.")
+# --- Ruta para inicializar la base de datos (¡SOLO PARA DESARROLLO/PRUEBAS!) ---
+@app.route('/init-db')
+def init_db():
+    with app.app_context():
+        try:
+            db.drop_all() # ¡CUIDADO! Esto borrará todas las tablas y datos existentes.
+            print("Tablas existentes eliminadas (si las había).")
+            db.create_all()
+            print("Base de datos recreada.")
 
-        if Pedido.query.count() == 0:
+            # Insertar datos de prueba
             db.session.add(Pedido(pedido_id_unico="PEDIDO-KHS-001", estado="En ruta", cliente="KHS Mexico S.A. de C.V.", descripcion="Bomba de Agua", fecha_impresion=datetime(2024, 7, 10, 10, 0, 0)))
             db.session.add(Pedido(
                 pedido_id_unico="PEDIDO-KHS-002",
@@ -42,29 +48,72 @@ with app.app_context():
             db.session.add(Pedido(pedido_id_unico="PEDIDO-KHS-003", estado="En ruta", cliente="Proveedor Industrial", descripcion="Refacciones Varias", fecha_impresion=datetime(2024, 7, 12, 9, 15, 0)))
             db.session.commit()
             print("Pedidos de prueba añadidos a la base de datos.")
+            flash("Base de datos inicializada y datos de prueba insertados con éxito.", "success")
+        except Exception as e:
+            print(f"ERROR: No se pudo inicializar la base de datos: {e}")
+            traceback.print_exc() # Imprimir el traceback completo
+            flash(f"Error al inicializar la base de datos: {e}. Revisa los logs de Render.", "error")
+    return redirect(url_for('index'))
+
+
+# --- Bloque de inicialización original (ahora solo para el primer arranque si no hay tablas) ---
+with app.app_context():
+    try:
+        # Solo crea las tablas si no existen. La ruta /init-db las recrea forzadamente.
+        db.create_all() 
+        print("Base de datos creada/actualizada si no existía (desde el bloque principal).")
+
+        # Este bloque solo se ejecutará si la tabla Pedido está completamente vacía
+        # Si la base de datos ya tiene la tabla, pero sin datos, usa /init-db
+        if Pedido.query.count() == 0:
+            db.session.add(Pedido(pedido_id_unico="PEDIDO-KHS-001", estado="En ruta", cliente="KHS Mexico S.A. de C.V.", descripcion="Bomba de Agua", fecha_impresion=datetime(2024, 7, 10, 10, 0, 0)))
+            db.session.add(Pedido(
+                pedido_id_unico="PEDIDO-KHS-002",
+                estado="Entregado",
+                cliente="Cliente Ejemplo S.A.",
+                descripcion="Componentes Electrónicos",
+                fecha_impresion=datetime(2024, 7, 11, 14, 30, 0),
+                nombre_cliente="Juan Perez",
+                fecha_entrega=datetime(2024, 7, 11, 15, 0, 0),
+                firma_base64="data:image/png;base64,iVBORw0KGgoAAAANSUgAEAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+                latitude="19.2833",
+                longitude="-99.1333"
+            ))
+            db.session.add(Pedido(pedido_id_unico="PEDIDO-KHS-003", estado="En ruta", cliente="Proveedor Industrial", descripcion="Refacciones Varias", fecha_impresion=datetime(2024, 7, 12, 9, 15, 0)))
+            db.session.commit()
+            print("Pedidos de prueba añadidos a la base de datos (desde el bloque principal).")
     except Exception as e:
-        print(f"ERROR: No se pudo conectar o inicializar la base de datos: {e}")
+        print(f"ERROR: No se pudo conectar o inicializar la base de datos (desde el bloque principal): {e}")
         print("Asegúrate de que la URL de la base de datos sea correcta y accesible.")
 
 
+# --- Rutas de la Aplicación ---
 @app.route('/')
 def index():
+    """Ruta principal que muestra un mensaje de bienvenida."""
     return "Bienvenido al sistema de confirmación de entregas de KHS México."
 
 @app.route('/confirmar_entrega', methods=['GET', 'POST'])
 def confirmar_entrega():
+    """
+    Maneja la visualización del formulario de confirmación de entrega
+    y el procesamiento de la información enviada.
+    """
+    # Obtener el ID del pedido de los parámetros de la URL
     pedido_id_unico = request.args.get('pedido_id')
 
     if not pedido_id_unico:
         flash('ID de pedido no proporcionado.', 'error')
         return redirect(url_for('error_page'))
 
+    # Buscar el pedido en la base de datos
     pedido = Pedido.query.filter_by(pedido_id_unico=pedido_id_unico).first()
 
     if not pedido:
         flash(f'Pedido con ID **{pedido_id_unico}** no encontrado.', 'error')
         return redirect(url_for('error_page'))
 
+    # Si el pedido ya está entregado, mostrar mensaje y detalles
     if pedido.estado == "Entregado":
         session.pop('_flashes', None)
         
