@@ -1,5 +1,5 @@
 # app.py
-from flask import Flask, request, render_template, redirect, url_for, flash
+from flask import Flask, request, render_template, redirect, url_for, flash, session
 from flask_sqlalchemy import SQLAlchemy
 # Importar db y Pedido desde models.py - asumiendo que Pedido está definido allí
 from models import db, Pedido 
@@ -24,11 +24,6 @@ print(f"DEBUG: SQLALCHEMY_DATABASE_URI: {app.config['SQLALCHEMY_DATABASE_URI']}"
 # Inicializar db con la aplicación Flask
 db.init_app(app)
 
-# --- NOTA IMPORTANTE ---
-# La clase Pedido ya se importa desde models.py, por lo que la eliminamos de aquí.
-# Si no tienes un archivo models.py y la clase Pedido solo debería estar aquí,
-# entonces elimina la línea 'from models import db, Pedido' y mantén la definición de la clase aquí.
-
 # Crear la base de datos si no existe
 with app.app_context():
     try:
@@ -38,14 +33,13 @@ with app.app_context():
         # Opcional: Añadir algunos pedidos de prueba si la BD está vacía
         if Pedido.query.count() == 0:
             db.session.add(Pedido(pedido_id_unico="PEDIDO-KHS-001", estado="En ruta", cliente="KHS Mexico S.A. de C.V.", descripcion="Bomba de Agua", fecha_impresion=datetime(2024, 7, 10, 10, 0, 0)))
-            db.session.add(Pedido(pedido_id_unico="PEDIDO-KHS-002", estado="En ruta", cliente="Cliente Ejemplo S.A.", descripcion="Componentes Electrónicos", fecha_impresion=datetime(2024, 7, 11, 14, 30, 0)))
+            db.session.add(Pedido(pedido_id_unico="PEDIDO-KHS-002", estado="Entregado", cliente="Cliente Ejemplo S.A.", descripcion="Componentes Electrónicos", fecha_impresion=datetime(2024, 7, 11, 14, 30, 0)))
             db.session.add(Pedido(pedido_id_unico="PEDIDO-KHS-003", estado="En ruta", cliente="Proveedor Industrial", descripcion="Refacciones Varias", fecha_impresion=datetime(2024, 7, 12, 9, 15, 0)))
             db.session.commit()
             print("Pedidos de prueba añadidos a la base de datos.")
     except Exception as e:
         print(f"ERROR: No se pudo conectar o inicializar la base de datos: {e}")
         print("Asegúrate de que la URL de la base de datos sea correcta y accesible.")
-        # Si el error es de SQLite y esperas PostgreSQL, revisa tu archivo .env o conexiones previas.
 
 
 # --- Rutas de la Aplicación ---
@@ -76,15 +70,23 @@ def confirmar_entrega():
 
     # Si el pedido ya está entregado, mostrar mensaje y detalles
     if pedido.estado == "Entregado":
-        flash(f'El pedido **{pedido_id_unico}** ya ha sido marcado como entregado el **{pedido.fecha_entrega.strftime("%Y-%m-%d %H:%M:%S")}**.', 'info')
+        # Limpiar cualquier mensaje flash existente antes de mostrar uno nuevo
+        # Esto previene que se muestren mensajes de interacciones anteriores.
+        session.pop('_flashes', None)
+        
+        # Flashear un mensaje específico para este pedido ya entregado
+        formatted_fecha_entrega = pedido.fecha_entrega.strftime("%Y-%m-%d %H:%M:%S") if pedido.fecha_entrega else 'N/A'
+        flash(f'El pedido **{pedido_id_unico}** ya ha sido marcado como entregado el **{formatted_fecha_entrega}**.', 'info')
+        
+        # Redirigir a la página de éxito para mostrar los detalles de este pedido específico
         return render_template('exito.html',
-                                pedido_id=pedido_id_unico,
-                                mensaje="Este pedido ya ha sido entregado.",
-                                nombre_cliente=pedido.nombre_cliente,
-                                fecha_entrega=pedido.fecha_entrega.strftime("%Y-%m-%d %H:%M:%S"),
-                                firma_base64=pedido.firma_base64,
-                                latitude=pedido.latitude,
-                                longitude=pedido.longitude)
+                                 pedido_id=pedido_id_unico,
+                                 mensaje="Este pedido ya ha sido entregado.",
+                                 nombre_cliente=pedido.nombre_cliente,
+                                 fecha_entrega=formatted_fecha_entrega,
+                                 firma_base64=pedido.firma_base64,
+                                 latitude=pedido.latitude,
+                                 longitude=pedido.longitude)
 
     # Procesar el formulario cuando se envía (método POST)
     if request.method == 'POST':
@@ -96,14 +98,10 @@ def confirmar_entrega():
         # Validar que los campos requeridos no estén vacíos
         if not nombre_cliente or not firma_base64:
             flash('Por favor, ingrese su nombre y firme para confirmar la entrega.', 'error')
-            #return render_template('confirmar_entrega.html', pedido_id=pedido_id_unico, pedido=pedido)
             return render_template('confirmar_entrega.html',
                                    pedido_id=pedido_id_unico,
-                                   pedido=pedido,
-                                   #cliente=pedido.cliente, # Añadido
-                                   #descripcion=pedido.descripcion, # Añadido
-                                   #fecha_impresion=pedido.fecha_impresion.strftime("%Y-%m-%d %H:%M:%S") if pedido.fecha_impresion else 'N/A' # Añadido
-                                   )
+                                   pedido=pedido)
+        
         # Actualizar los datos del pedido
         pedido.nombre_cliente = nombre_cliente
         pedido.firma_base64 = firma_base64
@@ -115,15 +113,19 @@ def confirmar_entrega():
         try:
             # Guardar los cambios en la base de datos
             db.session.commit()
+            # Limpiar cualquier mensaje flash existente antes de flashear el de éxito
+            session.pop('_flashes', None)
             flash('¡Entrega confirmada con éxito!', 'success')
+            
             # Redirigir a una página de éxito o mostrar el resultado
+            formatted_fecha_entrega = pedido.fecha_entrega.strftime("%Y-%m-%d %H:%M:%S") if pedido.fecha_entrega else 'N/A'
             return render_template('exito.html',
-                                    pedido_id=pedido_id_unico,
-                                    nombre_cliente=nombre_cliente,
-                                    fecha_entrega=pedido.fecha_entrega.strftime("%Y-%m-%d %H:%M:%S"),
-                                    firma_base64=firma_base64,
-                                    latitude=latitude,
-                                    longitude=longitude)
+                                     pedido_id=pedido_id_unico,
+                                     nombre_cliente=nombre_cliente,
+                                     fecha_entrega=formatted_fecha_entrega,
+                                     firma_base64=firma_base64,
+                                     latitude=latitude,
+                                     longitude=longitude)
         except Exception as e:
             # En caso de error, revertir la transacción y mostrar un mensaje
             db.session.rollback()
@@ -131,6 +133,9 @@ def confirmar_entrega():
             return render_template('confirmar_entrega.html', pedido_id=pedido_id_unico, pedido=pedido)
 
     # Mostrar el formulario de confirmación de entrega (método GET)
+    # Limpiar cualquier mensaje flash existente cuando se carga el formulario
+    # para un pedido que no ha sido entregado aún.
+    session.pop('_flashes', None)
     return render_template('confirmar_entrega.html', pedido_id=pedido_id_unico, pedido=pedido)
 
 @app.route('/error')
