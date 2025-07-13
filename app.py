@@ -13,6 +13,7 @@ load_dotenv()
 app = Flask(__name__)
 
 # Configuración de la base de datos
+# Asegúrate de que tu variable de entorno DATABASE_URL en Render apunte a tu base de datos PostgreSQL.
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://basedatos_envios_khs_5200:3QP4UN6ZUIDm2iw42GYVMMw3mhpTX176@dpg-d1pgve49c44c738k7j4g-a.oregon-postgres.render.com/basedatos_envios_khs_5200')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', '3QP4UN6ZUIDm2iw42GYVMMw3mhpTX176') # ¡CAMBIA ESTO EN PRODUCCIÓN!
@@ -20,72 +21,6 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', '3QP4UN6ZUIDm2iw42GYVMMw3mhpT
 print(f"DEBUG: SQLALCHEMY_DATABASE_URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
 
 db.init_app(app)
-
-# --- Ruta para inicializar la base de datos (¡SOLO PARA DESARROLLO/PRUEBAS!) ---
-@app.route('/init-db')
-def init_db():
-    with app.app_context():
-        try:
-            db.drop_all() # ¡CUIDADO! Esto borrará todas las tablas y datos existentes.
-            print("Tablas existentes eliminadas (si las había).")
-            db.create_all()
-            print("Base de datos recreada.")
-
-            # Insertar datos de prueba
-            db.session.add(Pedido(pedido_id_unico="PEDIDO-KHS-001", estado="En ruta", cliente="KHS Mexico S.A. de C.V.", descripcion="Bomba de Agua", fecha_impresion=datetime(2024, 7, 10, 10, 0, 0)))
-            db.session.add(Pedido(
-                pedido_id_unico="PEDIDO-KHS-002",
-                estado="Entregado",
-                cliente="Cliente Ejemplo S.A.",
-                descripcion="Componentes Electrónicos",
-                fecha_impresion=datetime(2024, 7, 11, 14, 30, 0),
-                nombre_cliente="Juan Perez",
-                fecha_entrega=datetime(2024, 7, 11, 15, 0, 0),
-                firma_base64="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
-                latitude="19.2833",
-                longitude="-99.1333"
-            ))
-            db.session.add(Pedido(pedido_id_unico="PEDIDO-KHS-003", estado="En ruta", cliente="Proveedor Industrial", descripcion="Refacciones Varias", fecha_impresion=datetime(2024, 7, 12, 9, 15, 0)))
-            db.session.commit()
-            print("Pedidos de prueba añadidos a la base de datos.")
-            flash("Base de datos inicializada y datos de prueba insertados con éxito.", "success")
-        except Exception as e:
-            print(f"ERROR: No se pudo inicializar la base de datos: {e}")
-            traceback.print_exc() # Imprimir el traceback completo
-            flash(f"Error al inicializar la base de datos: {e}. Revisa los logs de Render.", "error")
-    return redirect(url_for('index'))
-
-
-# --- Bloque de inicialización original (ahora solo para el primer arranque si no hay tablas) ---
-with app.app_context():
-    try:
-        # Solo crea las tablas si no existen. La ruta /init-db las recrea forzadamente.
-        db.create_all() 
-        print("Base de datos creada/actualizada si no existía (desde el bloque principal).")
-
-        # Este bloque solo se ejecutará si la tabla Pedido está completamente vacía
-        # Si la base de datos ya tiene la tabla, pero sin datos, usa /init-db
-        if Pedido.query.count() == 0:
-            db.session.add(Pedido(pedido_id_unico="PEDIDO-KHS-001", estado="En ruta", cliente="KHS Mexico S.A. de C.V.", descripcion="Bomba de Agua", fecha_impresion=datetime(2024, 7, 10, 10, 0, 0)))
-            db.session.add(Pedido(
-                pedido_id_unico="PEDIDO-KHS-002",
-                estado="Entregado",
-                cliente="Cliente Ejemplo S.A.",
-                descripcion="Componentes Electrónicos",
-                fecha_impresion=datetime(2024, 7, 11, 14, 30, 0),
-                nombre_cliente="Juan Perez",
-                fecha_entrega=datetime(2024, 7, 11, 15, 0, 0),
-                firma_base64="data:image/png;base64,iVBORw0KGgoAAAANSUgAEAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
-                latitude="19.2833",
-                longitude="-99.1333"
-            ))
-            db.session.add(Pedido(pedido_id_unico="PEDIDO-KHS-003", estado="En ruta", cliente="Proveedor Industrial", descripcion="Refacciones Varias", fecha_impresion=datetime(2024, 7, 12, 9, 15, 0)))
-            db.session.commit()
-            print("Pedidos de prueba añadidos a la base de datos (desde el bloque principal).")
-    except Exception as e:
-        print(f"ERROR: No se pudo conectar o inicializar la base de datos (desde el bloque principal): {e}")
-        print("Asegúrate de que la URL de la base de datos sea correcta y accesible.")
-
 
 # --- Rutas de la Aplicación ---
 @app.route('/')
@@ -107,6 +42,7 @@ def confirmar_entrega():
         return redirect(url_for('error_page'))
 
     # Buscar el pedido en la base de datos
+    # Si la base de datos en Render no tiene el pedido, esto devolverá None.
     pedido = Pedido.query.filter_by(pedido_id_unico=pedido_id_unico).first()
 
     if not pedido:
@@ -138,7 +74,6 @@ def confirmar_entrega():
                                      longitude=longitude_display)
         except Exception as e:
             # Imprimir un error más detallado en la consola del servidor
-            import traceback
             print(f"ERROR: Error al renderizar exito.html para pedido {pedido_id_unico}: {e}")
             traceback.print_exc() # Esto imprimirá el traceback completo
             flash(f'Error interno al mostrar los detalles del pedido: {e}. Revisa la consola del servidor para más detalles.', 'error')
