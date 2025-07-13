@@ -4,7 +4,7 @@ from models import db, Pedido # Asegúrate de importar tus modelos aquí
 
 with app.app_context():
     # Elimina todas las tablas existentes (¡CUIDADO! Esto borra todos los datos)
-     db.drop_all() 
+    # db.drop_all() 
     
     # Crea todas las tablas definidas en tus modelos
     db.create_all()
