@@ -20,7 +20,7 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', '3QP4UN6ZUIDm2iw42GYVMMw3mhpT
 # Línea de depuración para ver la URI de la base de datos
 print(f"DEBUG: SQLALCHEMY_DATABASE_URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
 
-db = SQLAlchemy(app)
+#db = SQLAlchemy(app)
 db.init_app(app)
 # --- Modelo de Base de Datos ---
 class Pedido(db.Model):
