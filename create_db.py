@@ -22,9 +22,9 @@ with app.app_context():
     )
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False # Mantener consistente con app.py
 
-    # Inicializar la instancia de SQLAlchemy con la aplicación actual
-    # Esto es crucial para que db.create_all() funcione correctamente en este contexto
-    db.init_app(app)
+    # La instancia de SQLAlchemy 'db' ya se inicializa con 'app' cuando 'app' se importa.
+    # Por lo tanto, NO necesitamos llamar db.init_app(app) aquí de nuevo.
+    # db.init_app(app) # <--- Esta línea ha sido eliminada para evitar el RuntimeError
     
     # Elimina todas las tablas existentes (¡CUIDADO! Esto borra todos los datos)
     # db.drop_all() 
