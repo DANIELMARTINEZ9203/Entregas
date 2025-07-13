@@ -1,7 +1,8 @@
 # app.py
 from flask import Flask, request, render_template, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
-from models import db, Pedido
+# Importar db y Pedido desde models.py - asumiendo que Pedido está definido allí
+from models import db, Pedido 
 import os
 from dotenv import load_dotenv
 from datetime import datetime
@@ -20,26 +21,13 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', '3QP4UN6ZUIDm2iw42GYVMMw3mhpT
 # Línea de depuración para ver la URI de la base de datos
 print(f"DEBUG: SQLALCHEMY_DATABASE_URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
 
-#db = SQLAlchemy(app)
+# Inicializar db con la aplicación Flask
 db.init_app(app)
-# --- Modelo de Base de Datos ---
-class Pedido(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    pedido_id_unico = db.Column(db.String(80), unique=True, nullable=False)
-    estado = db.Column(db.String(50), nullable=False, default="Pendiente")
-    nombre_cliente = db.Column(db.String(120), nullable=True)
-    firma_base64 = db.Column(db.Text, nullable=True)
-    fecha_entrega = db.Column(db.DateTime, nullable=True)
-    # Campos adicionales para la información del pedido que se muestra en el HTML
-    cliente = db.Column(db.String(120), nullable=True)
-    descripcion = db.Column(db.Text, nullable=True)
-    fecha_impresion = db.Column(db.DateTime, nullable=True, default=datetime.now)
-    # Campos para la ubicación
-    latitude = db.Column(db.String(50), nullable=True)
-    longitude = db.Column(db.String(50), nullable=True)
 
-    def __repr__(self):
-        return f'<Pedido {self.pedido_id_unico}>'
+# --- NOTA IMPORTANTE ---
+# La clase Pedido ya se importa desde models.py, por lo que la eliminamos de aquí.
+# Si no tienes un archivo models.py y la clase Pedido solo debería estar aquí,
+# entonces elimina la línea 'from models import db, Pedido' y mantén la definición de la clase aquí.
 
 # Crear la base de datos si no existe
 with app.app_context():
