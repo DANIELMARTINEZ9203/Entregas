@@ -1,6 +1,7 @@
 # app.py
 from flask import Flask, request, render_template, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
+from models import db, Pedido
 import os
 from dotenv import load_dotenv
 from datetime import datetime
@@ -20,7 +21,7 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', '3QP4UN6ZUIDm2iw42GYVMMw3mhpT
 print(f"DEBUG: SQLALCHEMY_DATABASE_URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
 
 db = SQLAlchemy(app)
-
+db.init_app(app)
 # --- Modelo de Base de Datos ---
 class Pedido(db.Model):
     id = db.Column(db.Integer, primary_key=True)
